@@ -146,4 +146,37 @@ public static class FakeWarehouseStore
             CreatedAt = DateTime.UtcNow
         }
     ];
+
+    public static List<Supplier> Suppliers { get; } =
+[
+    new Supplier
+    {
+        Id = Guid.NewGuid(),
+        Name = "Tech Supplier",
+        Country = "Lebanon",
+        ContactEmail = "contact@techsupplier.com",
+        PhoneNumber = "+961123456",
+        IsActive = true
+    },
+
+    new Supplier
+    {
+        Id = Guid.NewGuid(),
+        Name = "Office Supply Co",
+        Country = "France",
+        ContactEmail = "contact@officesupply.com",
+        PhoneNumber = "+33123456789",
+        IsActive = true
+    },
+
+    new Supplier
+    {
+        Id = Guid.NewGuid(),
+        Name = "Display Supplier",
+        Country = "Germany",
+        ContactEmail = "contact@displaysupplier.com",
+        PhoneNumber = "+49123456789",
+        IsActive = true
+    }
+];
 }
