@@ -276,4 +276,36 @@ public class ProductsController : ControllerBase
         });
     }
 
+    [HttpPost("{id}/assign-supplier/{supplierId}")]
+    public ActionResult<Product> AssignSupplier(
+    [FromRoute] Guid id,
+    [FromRoute] Guid supplierId)
+    {
+        var product = FakeWarehouseStore.Products
+            .FirstOrDefault(p => p.Id == id);
+
+        if (product == null)
+        {
+            return NotFound("Product not found.");
+        }
+
+        var supplier = FakeWarehouseStore.Suppliers
+            .FirstOrDefault(s => s.Id == supplierId);
+
+        if (supplier == null)
+        {
+            return NotFound("Supplier not found.");
+        }
+
+        if (product.IsArchived)
+        {
+            return BadRequest("Archived products cannot be assigned to a supplier.");
+        }
+
+        product.SupplierName = supplier.Name;
+        product.LastUpdatedAt = DateTime.UtcNow;
+
+        return Ok(product);
+    }
+
 }
