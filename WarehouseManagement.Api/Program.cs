@@ -8,6 +8,10 @@ builder.Services.AddControllers();
 
 builder.Services.AddScoped<SupplierService>();
 
+builder.Services.AddScoped<SupplierService>();
+
+builder.Services.AddScoped<DbFirstProductService>();
+
 builder.Services.AddDbContext<WarehouseDbFirstContext>(options =>
     options.UseNpgsql(
         builder.Configuration.GetConnectionString("WarehouseDbFirst")
