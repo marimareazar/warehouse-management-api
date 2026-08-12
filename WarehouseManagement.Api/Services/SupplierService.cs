@@ -14,14 +14,14 @@ public class SupplierService
     public Supplier? GetById(Guid id)
     {
         return FakeWarehouseStore.Suppliers
-            .FirstOrDefault(s => s.Id == id);
+            .FirstOrDefault(s => s.SupplierId == id);
     }
 
     public Supplier Create(CreateSupplierRequest request)
     {
         var supplier = new Supplier
         {
-            Id = Guid.NewGuid(),
+            SupplierId = Guid.NewGuid(),
             Name = request.Name,
             Country = request.Country,
             ContactEmail = request.ContactEmail,
@@ -37,7 +37,7 @@ public class SupplierService
     public bool Deactivate(Guid id)
     {
         var supplier = FakeWarehouseStore.Suppliers
-            .FirstOrDefault(s => s.Id == id);
+            .FirstOrDefault(s => s.SupplierId == id);
 
         if (supplier == null)
         {

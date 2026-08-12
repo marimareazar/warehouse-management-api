@@ -14,7 +14,7 @@ public static class FakeWarehouseStore
             Description = "Business laptop",
             Price = 1200,
             QuantityInStock = 10,
-            SupplierName = "Tech Supplier",
+            SupplierId = null,
             ExpiryDate = null,
             IsArchived = false,
             CreatedAt = DateTime.UtcNow
@@ -28,7 +28,7 @@ public static class FakeWarehouseStore
             Description = "Wireless mouse",
             Price = 25,
             QuantityInStock = 50,
-            SupplierName = "Tech Supplier",
+            SupplierId = null,
             ExpiryDate = null,
             IsArchived = false,
             CreatedAt = DateTime.UtcNow
@@ -42,7 +42,7 @@ public static class FakeWarehouseStore
             Description = "Mechanical keyboard",
             Price = 80,
             QuantityInStock = 30,
-            SupplierName = "Input Devices Ltd",
+            SupplierId = null,
             ExpiryDate = null,
             IsArchived = false,
             CreatedAt = DateTime.UtcNow
@@ -56,7 +56,7 @@ public static class FakeWarehouseStore
             Description = "Office scanner",
             Price = 250,
             QuantityInStock = 8,
-            SupplierName = "Office Supply Co",
+            SupplierId = null,
             ExpiryDate = null,
             IsArchived = false,
             CreatedAt = DateTime.UtcNow
@@ -70,7 +70,7 @@ public static class FakeWarehouseStore
             Description = "Laser printer",
             Price = 400,
             QuantityInStock = 15,
-            SupplierName = "Office Supply Co",
+            SupplierId = null,
             ExpiryDate = null,
             IsArchived = false,
             CreatedAt = DateTime.UtcNow
@@ -84,7 +84,7 @@ public static class FakeWarehouseStore
             Description = "27 inch monitor",
             Price = 300,
             QuantityInStock = 20,
-            SupplierName = "Display Supplier",
+            SupplierId = null,
             ExpiryDate = null,
             IsArchived = false,
             CreatedAt = DateTime.UtcNow
@@ -98,7 +98,7 @@ public static class FakeWarehouseStore
             Description = "HD webcam",
             Price = 70,
             QuantityInStock = 25,
-            SupplierName = "Tech Supplier",
+            SupplierId = null,
             ExpiryDate = null,
             IsArchived = false,
             CreatedAt = DateTime.UtcNow
@@ -112,7 +112,7 @@ public static class FakeWarehouseStore
             Description = "USB headset",
             Price = 60,
             QuantityInStock = 40,
-            SupplierName = "Audio Supplier",
+            SupplierId = null,
             ExpiryDate = null,
             IsArchived = false,
             CreatedAt = DateTime.UtcNow
@@ -126,7 +126,7 @@ public static class FakeWarehouseStore
             Description = "Wireless router",
             Price = 110,
             QuantityInStock = 12,
-            SupplierName = "Network Supplier",
+            SupplierId = null,
             ExpiryDate = null,
             IsArchived = false,
             CreatedAt = DateTime.UtcNow
@@ -140,7 +140,7 @@ public static class FakeWarehouseStore
             Description = "USB-C cable",
             Price = 15,
             QuantityInStock = 100,
-            SupplierName = "Cable Supplier",
+            SupplierId = null,
             ExpiryDate = null,
             IsArchived = false,
             CreatedAt = DateTime.UtcNow
@@ -151,7 +151,7 @@ public static class FakeWarehouseStore
 [
     new Supplier
     {
-        Id = Guid.NewGuid(),
+        SupplierId = Guid.NewGuid(),
         Name = "Tech Supplier",
         Country = "Lebanon",
         ContactEmail = "contact@techsupplier.com",
@@ -161,7 +161,7 @@ public static class FakeWarehouseStore
 
     new Supplier
     {
-        Id = Guid.NewGuid(),
+        SupplierId = Guid.NewGuid(),
         Name = "Office Supply Co",
         Country = "France",
         ContactEmail = "contact@officesupply.com",
@@ -171,7 +171,7 @@ public static class FakeWarehouseStore
 
     new Supplier
     {
-        Id = Guid.NewGuid(),
+        SupplierId = Guid.NewGuid(),
         Name = "Display Supplier",
         Country = "Germany",
         ContactEmail = "contact@displaysupplier.com",

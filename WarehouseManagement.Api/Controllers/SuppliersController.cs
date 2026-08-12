@@ -45,7 +45,7 @@ public class SuppliersController : ControllerBase
 
         return CreatedAtAction(
             nameof(GetById),
-            new { id = supplier.Id },
+            new { id = supplier.SupplierId },
             supplier);
     }
 

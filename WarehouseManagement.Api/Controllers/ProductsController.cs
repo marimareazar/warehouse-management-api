@@ -10,7 +10,6 @@ namespace WarehouseManagement.Api.Controllers;
 [Route("api/products")]
 public class ProductsController : ControllerBase
 {
-
     private readonly ILogger<ProductsController> _logger;
 
     public ProductsController(ILogger<ProductsController> logger)
@@ -18,24 +17,27 @@ public class ProductsController : ControllerBase
         _logger = logger;
     }
 
-
     [HttpGet]
-    public ActionResult<IEnumerable<Product>> GetAll([FromQuery] bool onlyAvailable = false)
+    public ActionResult<IEnumerable<Product>> GetAll(
+        [FromQuery] bool onlyAvailable = false)
     {
         var products = FakeWarehouseStore.Products.AsEnumerable();
 
         if (onlyAvailable)
         {
-            products = products.Where(p => p.QuantityInStock > 0);
+            products = products.Where(
+                p => p.QuantityInStock > 0);
         }
 
-        products = products.OrderByDescending(p => p.CreatedAt);
+        products = products
+            .OrderByDescending(p => p.CreatedAt);
 
         return Ok(products);
     }
 
     [HttpGet("{id}")]
-    public ActionResult<Product> GetById([FromRoute] Guid id)
+    public ActionResult<Product> GetById(
+        [FromRoute] Guid id)
     {
         var product = FakeWarehouseStore.Products
             .FirstOrDefault(p => p.Id == id);
@@ -50,27 +52,32 @@ public class ProductsController : ControllerBase
 
     [HttpGet("search")]
     public ActionResult<IEnumerable<Product>> Search(
-    [FromQuery] string? name,
-    [FromQuery] string? supplier)
+        [FromQuery] string? name,
+        [FromQuery] string? supplier)
     {
         if (string.IsNullOrWhiteSpace(name) &&
             string.IsNullOrWhiteSpace(supplier))
         {
-            return BadRequest("Please provide a name or supplier.");
+            return BadRequest(
+                "Please provide a name or supplier.");
         }
 
-        var products = FakeWarehouseStore.Products.AsEnumerable();
+        var products = FakeWarehouseStore.Products
+            .AsEnumerable();
 
         if (!string.IsNullOrWhiteSpace(name))
         {
             products = products.Where(p =>
-                p.Name.Contains(name, StringComparison.OrdinalIgnoreCase));
+                p.Name.Contains(
+                    name,
+                    StringComparison.OrdinalIgnoreCase));
         }
 
         if (!string.IsNullOrWhiteSpace(supplier))
         {
             products = products.Where(p =>
-                p.SupplierName.Contains(
+                p.Supplier != null &&
+                p.Supplier.Name.Contains(
                     supplier,
                     StringComparison.OrdinalIgnoreCase));
         }
@@ -79,7 +86,8 @@ public class ProductsController : ControllerBase
     }
 
     [HttpPost]
-    public ActionResult<Product> Create([FromBody] CreateProductRequest request)
+    public ActionResult<Product> Create(
+        [FromBody] CreateProductRequest request)
     {
         var duplicateSku = FakeWarehouseStore.Products
             .Any(p => p.SKU.Equals(
@@ -88,7 +96,8 @@ public class ProductsController : ControllerBase
 
         if (duplicateSku)
         {
-            return BadRequest("A product with this SKU already exists.");
+            return BadRequest(
+                "A product with this SKU already exists.");
         }
 
         var product = new Product
@@ -99,7 +108,6 @@ public class ProductsController : ControllerBase
             Description = request.Description,
             Price = request.Price,
             QuantityInStock = request.QuantityInStock,
-            SupplierName = request.SupplierName,
             ExpiryDate = request.ExpiryDate,
             IsArchived = false,
             CreatedAt = DateTime.UtcNow,
@@ -116,12 +124,13 @@ public class ProductsController : ControllerBase
 
     [HttpPost("{id}/quantity")]
     public ActionResult<Product> UpdateQuantity(
-    [FromRoute] Guid id,
-    [FromBody] UpdateProductQuantityRequest request)
+        [FromRoute] Guid id,
+        [FromBody] UpdateProductQuantityRequest request)
     {
         if (request.QuantityInStock < 0)
         {
-            return BadRequest("Quantity cannot be negative.");
+            return BadRequest(
+                "Quantity cannot be negative.");
         }
 
         var product = FakeWarehouseStore.Products
@@ -132,20 +141,24 @@ public class ProductsController : ControllerBase
             return NotFound();
         }
 
-        product.QuantityInStock = request.QuantityInStock;
-        product.LastUpdatedAt = DateTime.UtcNow;
+        product.QuantityInStock =
+            request.QuantityInStock;
+
+        product.LastUpdatedAt =
+            DateTime.UtcNow;
 
         return Ok(product);
     }
 
     [HttpPost("{id}/price")]
     public ActionResult<Product> UpdatePrice(
-    [FromRoute] Guid id,
-    [FromBody] UpdateProductPriceRequest request)
+        [FromRoute] Guid id,
+        [FromBody] UpdateProductPriceRequest request)
     {
         if (request.Price <= 0)
         {
-            return BadRequest("Price must be greater than 0.");
+            return BadRequest(
+                "Price must be greater than 0.");
         }
 
         var product = FakeWarehouseStore.Products
@@ -173,8 +186,8 @@ public class ProductsController : ControllerBase
     [HttpPost("{id}/image")]
     [Consumes("multipart/form-data")]
     public async Task<ActionResult<ProductImage>> UploadImage(
-    [FromRoute] Guid id,
-    [FromForm] UploadProductImageRequest request)
+        [FromRoute] Guid id,
+        [FromForm] UploadProductImageRequest request)
     {
         var file = request.File;
 
@@ -188,21 +201,26 @@ public class ProductsController : ControllerBase
 
         if (file == null || file.Length == 0)
         {
-            return BadRequest("No file was uploaded.");
+            return BadRequest(
+                "No file was uploaded.");
         }
 
         if (file.Length > 2 * 1024 * 1024)
         {
-            return BadRequest("File size cannot exceed 2 MB.");
+            return BadRequest(
+                "File size cannot exceed 2 MB.");
         }
 
-        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+        var extension = Path
+            .GetExtension(file.FileName)
+            .ToLowerInvariant();
 
         if (extension != ".jpg" &&
             extension != ".jpeg" &&
             extension != ".png")
         {
-            return BadRequest("Only JPG and PNG files are allowed.");
+            return BadRequest(
+                "Only JPG and PNG files are allowed.");
         }
 
         var uploadsFolder = Path.Combine(
@@ -210,31 +228,41 @@ public class ProductsController : ControllerBase
             "wwwroot",
             "uploads");
 
-        Directory.CreateDirectory(uploadsFolder);
+        Directory.CreateDirectory(
+            uploadsFolder);
 
-        var fileName = $"{Guid.NewGuid()}{extension}";
+        var fileName =
+            $"{Guid.NewGuid()}{extension}";
 
         var filePath = Path.Combine(
             uploadsFolder,
             fileName);
 
-        using (var stream = new FileStream(filePath, FileMode.Create))
+        using (var stream =
+            new FileStream(
+                filePath,
+                FileMode.Create))
         {
             await file.CopyToAsync(stream);
         }
 
         var productImage = new ProductImage
         {
+            ProductImageId = Guid.NewGuid(),
             ProductId = product.Id,
             FileName = fileName,
-            FilePath = $"/uploads/{fileName}"
+            FilePath = $"/uploads/{fileName}",
+            Product = product
         };
+
+        product.Images.Add(productImage);
 
         return Ok(productImage);
     }
 
     [HttpDelete("{id}")]
-    public ActionResult Delete([FromRoute] Guid id)
+    public ActionResult Delete(
+        [FromRoute] Guid id)
     {
         var product = FakeWarehouseStore.Products
             .FirstOrDefault(p => p.Id == id);
@@ -250,12 +278,18 @@ public class ProductsController : ControllerBase
         return NoContent();
     }
 
-
     [HttpGet("server-time")]
     public ActionResult GetServerTime(
-    [FromHeader(Name = "Accept-Language")] string? language)
+        [FromHeader(Name = "Accept-Language")]
+        string? language)
     {
-        var supportedLanguages = new[] { "en-US", "fr-FR", "ar-LB" };
+        var supportedLanguages =
+            new[]
+            {
+                "en-US",
+                "fr-FR",
+                "ar-LB"
+            };
 
         if (string.IsNullOrWhiteSpace(language) ||
             !supportedLanguages.Contains(language))
@@ -263,11 +297,13 @@ public class ProductsController : ControllerBase
             language = "en-US";
         }
 
-        var culture = new CultureInfo(language);
+        var culture =
+            new CultureInfo(language);
 
-        var formattedDate = DateTime.Now.ToString(
-            "F",
-            culture);
+        var formattedDate =
+            DateTime.Now.ToString(
+                "F",
+                culture);
 
         return Ok(new
         {
@@ -278,34 +314,43 @@ public class ProductsController : ControllerBase
 
     [HttpPost("{id}/assign-supplier/{supplierId}")]
     public ActionResult<Product> AssignSupplier(
-    [FromRoute] Guid id,
-    [FromRoute] Guid supplierId)
+        [FromRoute] Guid id,
+        [FromRoute] Guid supplierId)
     {
         var product = FakeWarehouseStore.Products
             .FirstOrDefault(p => p.Id == id);
 
         if (product == null)
         {
-            return NotFound("Product not found.");
+            return NotFound(
+                "Product not found.");
         }
 
         var supplier = FakeWarehouseStore.Suppliers
-            .FirstOrDefault(s => s.Id == supplierId);
+            .FirstOrDefault(
+                s => s.SupplierId == supplierId);
 
         if (supplier == null)
         {
-            return NotFound("Supplier not found.");
+            return NotFound(
+                "Supplier not found.");
         }
 
         if (product.IsArchived)
         {
-            return BadRequest("Archived products cannot be assigned to a supplier.");
+            return BadRequest(
+                "Archived products cannot be assigned to a supplier.");
         }
 
-        product.SupplierName = supplier.Name;
-        product.LastUpdatedAt = DateTime.UtcNow;
+        product.SupplierId =
+            supplier.SupplierId;
+
+        product.Supplier =
+            supplier;
+
+        product.LastUpdatedAt =
+            DateTime.UtcNow;
 
         return Ok(product);
     }
-
 }
