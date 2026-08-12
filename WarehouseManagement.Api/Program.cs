@@ -1,11 +1,38 @@
+using Microsoft.AspNetCore.OData;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OData.ModelBuilder;
 using WarehouseManagement.Api.Data;
 using WarehouseManagement.Api.Mapping;
+using WarehouseManagement.Api.Models;
 using WarehouseManagement.Api.Services;
+
+static Microsoft.OData.Edm.IEdmModel GetEdmModel()
+{
+    var builder = new ODataConventionModelBuilder();
+
+    builder.EntitySet<Product>("ODataProducts");
+    builder.EntitySet<Supplier>("ODataSuppliers");
+
+    return builder.GetEdmModel();
+}
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services
+    .AddControllers()
+    .AddOData(options =>
+        options
+            .Select()
+            .Filter()
+            .OrderBy()
+            .Expand()
+            .Count()
+            .SetMaxTop(100)
+            .AddRouteComponents(
+                "odata",
+                GetEdmModel()
+            )
+    );
 
 builder.Services.AddOpenApi();
 
