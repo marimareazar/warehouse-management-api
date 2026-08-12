@@ -1,4 +1,4 @@
-using WarehouseManagement.Api.Contracts;
+using Microsoft.EntityFrameworkCore;
 using WarehouseManagement.Api.Data;
 using WarehouseManagement.Api.Models;
 
@@ -6,46 +6,65 @@ namespace WarehouseManagement.Api.Services;
 
 public class SupplierService
 {
-    public IEnumerable<Supplier> GetAll()
+    private readonly WarehouseDbContext _context;
+
+    public SupplierService(WarehouseDbContext context)
     {
-        return FakeWarehouseStore.Suppliers;
+        _context = context;
     }
 
-    public Supplier? GetById(Guid id)
+    public async Task<List<Supplier>> GetAllAsync()
     {
-        return FakeWarehouseStore.Suppliers
-            .FirstOrDefault(s => s.SupplierId == id);
+        return await _context.Suppliers
+            .Include(s => s.Products)
+            .OrderBy(s => s.Name)
+            .ToListAsync();
     }
 
-    public Supplier Create(CreateSupplierRequest request)
+    public async Task<Supplier?> GetByIdAsync(Guid id)
     {
-        var supplier = new Supplier
-        {
-            SupplierId = Guid.NewGuid(),
-            Name = request.Name,
-            Country = request.Country,
-            ContactEmail = request.ContactEmail,
-            PhoneNumber = request.PhoneNumber,
-            IsActive = true
-        };
+        return await _context.Suppliers
+            .Include(s => s.Products)
+            .FirstOrDefaultAsync(
+                s => s.SupplierId == id);
+    }
 
-        FakeWarehouseStore.Suppliers.Add(supplier);
+    public async Task<Supplier> AddAsync(Supplier supplier)
+    {
+        _context.Suppliers.Add(supplier);
+
+        await _context.SaveChangesAsync();
 
         return supplier;
     }
 
-    public bool Deactivate(Guid id)
+    public async Task<bool> ExistsByNameAsync(string name)
     {
-        var supplier = FakeWarehouseStore.Suppliers
-            .FirstOrDefault(s => s.SupplierId == id);
+        return await _context.Suppliers
+            .AnyAsync(s => s.Name == name);
+    }
+
+    public async Task<Supplier?> UpdateAsync(
+        Guid id,
+        Supplier updatedSupplier)
+    {
+        var supplier = await _context.Suppliers
+            .FirstOrDefaultAsync(
+                s => s.SupplierId == id);
 
         if (supplier == null)
         {
-            return false;
+            return null;
         }
 
-        supplier.IsActive = false;
+        supplier.Name = updatedSupplier.Name;
+        supplier.Country = updatedSupplier.Country;
+        supplier.ContactEmail = updatedSupplier.ContactEmail;
+        supplier.PhoneNumber = updatedSupplier.PhoneNumber;
+        supplier.IsActive = updatedSupplier.IsActive;
 
-        return true;
+        await _context.SaveChangesAsync();
+
+        return supplier;
     }
 }

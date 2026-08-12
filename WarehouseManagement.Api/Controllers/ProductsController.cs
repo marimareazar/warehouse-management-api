@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
-using WarehouseManagement.Api.Data;
 using WarehouseManagement.Api.Models;
 using WarehouseManagement.Api.Contracts;
+using WarehouseManagement.Api.Services;
 using System.Globalization;
+using AutoMapper;
+using WarehouseManagement.Api.ViewModels;
 
 namespace WarehouseManagement.Api.Controllers;
 
@@ -10,89 +12,62 @@ namespace WarehouseManagement.Api.Controllers;
 [Route("api/products")]
 public class ProductsController : ControllerBase
 {
+    private readonly ProductService _productService;
     private readonly ILogger<ProductsController> _logger;
+    private readonly IMapper _mapper;
 
-    public ProductsController(ILogger<ProductsController> logger)
+    public ProductsController(
+        ProductService productService,
+        ILogger<ProductsController> logger,
+        IMapper mapper)
     {
+        _productService = productService;
         _logger = logger;
+        _mapper = mapper;
     }
 
     [HttpGet]
-    public ActionResult<IEnumerable<Product>> GetAll(
-        [FromQuery] bool onlyAvailable = false)
+    public async Task<ActionResult<IEnumerable<ProductViewModel>>> GetAll(
+    [FromQuery] bool onlyAvailable = false)
     {
-        var products = FakeWarehouseStore.Products.AsEnumerable();
+        var products = await _productService.GetAllAsync();
 
         if (onlyAvailable)
         {
-            products = products.Where(
-                p => p.QuantityInStock > 0);
+            products = products
+                .Where(p => p.QuantityInStock > 0)
+                .ToList();
         }
 
-        products = products
-            .OrderByDescending(p => p.CreatedAt);
+        var result =
+            _mapper.Map<List<ProductViewModel>>(products);
 
-        return Ok(products);
+        return Ok(result);
     }
 
     [HttpGet("{id}")]
-    public ActionResult<Product> GetById(
-        [FromRoute] Guid id)
+    public async Task<ActionResult<ProductViewModel>> GetById(
+     [FromRoute] Guid id)
     {
-        var product = FakeWarehouseStore.Products
-            .FirstOrDefault(p => p.Id == id);
+        var product = await _productService.GetByIdAsync(id);
 
         if (product == null)
         {
             return NotFound();
         }
 
-        return Ok(product);
-    }
+        var result =
+            _mapper.Map<ProductViewModel>(product);
 
-    [HttpGet("search")]
-    public ActionResult<IEnumerable<Product>> Search(
-        [FromQuery] string? name,
-        [FromQuery] string? supplier)
-    {
-        if (string.IsNullOrWhiteSpace(name) &&
-            string.IsNullOrWhiteSpace(supplier))
-        {
-            return BadRequest(
-                "Please provide a name or supplier.");
-        }
-
-        var products = FakeWarehouseStore.Products
-            .AsEnumerable();
-
-        if (!string.IsNullOrWhiteSpace(name))
-        {
-            products = products.Where(p =>
-                p.Name.Contains(
-                    name,
-                    StringComparison.OrdinalIgnoreCase));
-        }
-
-        if (!string.IsNullOrWhiteSpace(supplier))
-        {
-            products = products.Where(p =>
-                p.Supplier != null &&
-                p.Supplier.Name.Contains(
-                    supplier,
-                    StringComparison.OrdinalIgnoreCase));
-        }
-
-        return Ok(products);
+        return Ok(result);
     }
 
     [HttpPost]
-    public ActionResult<Product> Create(
-        [FromBody] CreateProductRequest request)
+    public async Task<ActionResult<ProductViewModel>> Create(
+    [FromBody] CreateProductRequest request)
     {
-        var duplicateSku = FakeWarehouseStore.Products
-            .Any(p => p.SKU.Equals(
-                request.SKU,
-                StringComparison.OrdinalIgnoreCase));
+        var duplicateSku =
+            await _productService.SkuExistsAsync(request.SKU);
 
         if (duplicateSku)
         {
@@ -114,18 +89,21 @@ public class ProductsController : ControllerBase
             LastUpdatedAt = null
         };
 
-        FakeWarehouseStore.Products.Add(product);
+        await _productService.AddAsync(product);
+
+        var result =
+            _mapper.Map<ProductViewModel>(product);
 
         return CreatedAtAction(
             nameof(GetById),
             new { id = product.Id },
-            product);
+            result);
     }
 
     [HttpPost("{id}/quantity")]
-    public ActionResult<Product> UpdateQuantity(
-        [FromRoute] Guid id,
-        [FromBody] UpdateProductQuantityRequest request)
+    public async Task<ActionResult<ProductViewModel>> UpdateQuantity(
+    [FromRoute] Guid id,
+    [FromBody] UpdateProductQuantityRequest request)
     {
         if (request.QuantityInStock < 0)
         {
@@ -133,27 +111,25 @@ public class ProductsController : ControllerBase
                 "Quantity cannot be negative.");
         }
 
-        var product = FakeWarehouseStore.Products
-            .FirstOrDefault(p => p.Id == id);
+        var product =
+            await _productService.UpdateQuantityAsync(
+                id,
+                request.QuantityInStock);
 
         if (product == null)
         {
             return NotFound();
         }
 
-        product.QuantityInStock =
-            request.QuantityInStock;
-
-        product.LastUpdatedAt =
-            DateTime.UtcNow;
-
-        return Ok(product);
+        return Ok(
+            _mapper.Map<ProductViewModel>(product)
+        );
     }
 
     [HttpPost("{id}/price")]
-    public ActionResult<Product> UpdatePrice(
-        [FromRoute] Guid id,
-        [FromBody] UpdateProductPriceRequest request)
+    public async Task<ActionResult<ProductViewModel>> UpdatePrice(
+    [FromRoute] Guid id,
+    [FromBody] UpdateProductPriceRequest request)
     {
         if (request.Price <= 0)
         {
@@ -161,48 +137,50 @@ public class ProductsController : ControllerBase
                 "Price must be greater than 0.");
         }
 
-        var product = FakeWarehouseStore.Products
-            .FirstOrDefault(p => p.Id == id);
+        var existingProduct =
+            await _productService.GetByIdAsync(id);
 
-        if (product == null)
+        if (existingProduct == null)
         {
             return NotFound();
         }
 
-        var oldPrice = product.Price;
+        var oldPrice = existingProduct.Price;
 
-        product.Price = request.Price;
-        product.LastUpdatedAt = DateTime.UtcNow;
+        var product =
+            await _productService.UpdatePriceAsync(
+                id,
+                request.Price);
 
         _logger.LogInformation(
             "Product {ProductId} price changed from {OldPrice} to {NewPrice}",
-            product.Id,
+            id,
             oldPrice,
-            product.Price);
+            request.Price);
 
-        return Ok(product);
+        return Ok(
+            _mapper.Map<ProductViewModel>(product)
+        );
     }
 
     [HttpPost("{id}/image")]
     [Consumes("multipart/form-data")]
-    public async Task<ActionResult<ProductImage>> UploadImage(
-        [FromRoute] Guid id,
-        [FromForm] UploadProductImageRequest request)
+    public async Task<IActionResult> UploadImage(
+    [FromRoute] Guid id,
+    [FromForm] UploadProductImageRequest request)
     {
-        var file = request.File;
-
-        var product = FakeWarehouseStore.Products
-            .FirstOrDefault(p => p.Id == id);
+        var product = await _productService.GetByIdAsync(id);
 
         if (product == null)
         {
             return NotFound();
         }
 
+        var file = request.File;
+
         if (file == null || file.Length == 0)
         {
-            return BadRequest(
-                "No file was uploaded.");
+            return BadRequest("No file was uploaded.");
         }
 
         if (file.Length > 2 * 1024 * 1024)
@@ -228,8 +206,7 @@ public class ProductsController : ControllerBase
             "wwwroot",
             "uploads");
 
-        Directory.CreateDirectory(
-            uploadsFolder);
+        Directory.CreateDirectory(uploadsFolder);
 
         var fileName =
             $"{Guid.NewGuid()}{extension}";
@@ -239,9 +216,7 @@ public class ProductsController : ControllerBase
             fileName);
 
         using (var stream =
-            new FileStream(
-                filePath,
-                FileMode.Create))
+            new FileStream(filePath, FileMode.Create))
         {
             await file.CopyToAsync(stream);
         }
@@ -249,33 +224,65 @@ public class ProductsController : ControllerBase
         var productImage = new ProductImage
         {
             ProductImageId = Guid.NewGuid(),
-            ProductId = product.Id,
+            ProductId = id,
             FileName = fileName,
             FilePath = $"/uploads/{fileName}",
             Product = product
         };
 
-        product.Images.Add(productImage);
+        var savedImage =
+            await _productService.AddImageAsync(
+                id,
+                productImage);
 
-        return Ok(productImage);
-    }
-
-    [HttpDelete("{id}")]
-    public ActionResult Delete(
-        [FromRoute] Guid id)
-    {
-        var product = FakeWarehouseStore.Products
-            .FirstOrDefault(p => p.Id == id);
-
-        if (product == null)
+        if (savedImage == null)
         {
             return NotFound();
         }
 
-        product.IsArchived = true;
-        product.LastUpdatedAt = DateTime.UtcNow;
+        return Ok(new
+        {
+            savedImage.ProductImageId,
+            savedImage.ProductId,
+            savedImage.FileName,
+            savedImage.FilePath
+        });
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(
+        [FromRoute] Guid id)
+    {
+        var archived =
+            await _productService.ArchiveAsync(id);
+
+        if (!archived)
+        {
+            return NotFound();
+        }
 
         return NoContent();
+    }
+
+    [HttpPost("{id}/assign-supplier/{supplierId}")]
+    public async Task<ActionResult<ProductViewModel>> AssignSupplier(
+    [FromRoute] Guid id,
+    [FromRoute] Guid supplierId)
+    {
+        var product =
+            await _productService.AssignSupplierAsync(
+                id,
+                supplierId);
+
+        if (product == null)
+        {
+            return NotFound(
+                "Product or supplier not found.");
+        }
+
+        return Ok(
+            _mapper.Map<ProductViewModel>(product)
+        );
     }
 
     [HttpGet("server-time")]
@@ -310,47 +317,5 @@ public class ProductsController : ControllerBase
             language,
             serverTime = formattedDate
         });
-    }
-
-    [HttpPost("{id}/assign-supplier/{supplierId}")]
-    public ActionResult<Product> AssignSupplier(
-        [FromRoute] Guid id,
-        [FromRoute] Guid supplierId)
-    {
-        var product = FakeWarehouseStore.Products
-            .FirstOrDefault(p => p.Id == id);
-
-        if (product == null)
-        {
-            return NotFound(
-                "Product not found.");
-        }
-
-        var supplier = FakeWarehouseStore.Suppliers
-            .FirstOrDefault(
-                s => s.SupplierId == supplierId);
-
-        if (supplier == null)
-        {
-            return NotFound(
-                "Supplier not found.");
-        }
-
-        if (product.IsArchived)
-        {
-            return BadRequest(
-                "Archived products cannot be assigned to a supplier.");
-        }
-
-        product.SupplierId =
-            supplier.SupplierId;
-
-        product.Supplier =
-            supplier;
-
-        product.LastUpdatedAt =
-            DateTime.UtcNow;
-
-        return Ok(product);
     }
 }

@@ -1,7 +1,9 @@
-namespace WarehouseManagement.Api.Contracts;
+namespace WarehouseManagement.Api.ViewModels;
 
-public class CreateSupplierRequest
+public class SupplierViewModel
 {
+    public Guid SupplierId { get; set; }
+
     public string Name { get; set; } = string.Empty;
 
     public string Country { get; set; } = string.Empty;
@@ -10,5 +12,5 @@ public class CreateSupplierRequest
 
     public string PhoneNumber { get; set; } = string.Empty;
 
-    public bool IsActive { get; set; } = true;
+    public bool IsActive { get; set; }
 }

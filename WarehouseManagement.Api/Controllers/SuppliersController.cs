@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
-using WarehouseManagement.Api.Contracts;
 using WarehouseManagement.Api.Models;
 using WarehouseManagement.Api.Services;
+using AutoMapper;
+using WarehouseManagement.Api.ViewModels;
+using WarehouseManagement.Api.Contracts;
 
 namespace WarehouseManagement.Api.Controllers;
 
@@ -10,55 +12,103 @@ namespace WarehouseManagement.Api.Controllers;
 public class SuppliersController : ControllerBase
 {
     private readonly SupplierService _supplierService;
+    private readonly IMapper _mapper;
 
-    public SuppliersController(SupplierService supplierService)
+    public SuppliersController(
+        SupplierService supplierService,
+        IMapper mapper)
     {
         _supplierService = supplierService;
+        _mapper = mapper;
     }
 
     [HttpGet]
-    public ActionResult<IEnumerable<Supplier>> GetAll()
+    public async Task<ActionResult<IEnumerable<SupplierViewModel>>> GetAll()
     {
-        var suppliers = _supplierService.GetAll();
+        var suppliers =
+            await _supplierService.GetAllAsync();
 
-        return Ok(suppliers);
+        var result =
+            _mapper.Map<List<SupplierViewModel>>(suppliers);
+
+        return Ok(result);
     }
 
     [HttpGet("{id}")]
-    public ActionResult<Supplier> GetById([FromRoute] Guid id)
+    public async Task<ActionResult<SupplierViewModel>> GetById(
+    [FromRoute] Guid id)
     {
-        var supplier = _supplierService.GetById(id);
+        var supplier =
+            await _supplierService.GetByIdAsync(id);
 
         if (supplier == null)
         {
             return NotFound();
         }
 
-        return Ok(supplier);
+        return Ok(
+            _mapper.Map<SupplierViewModel>(supplier)
+        );
     }
 
     [HttpPost]
-    public ActionResult<Supplier> Create(
-        [FromBody] CreateSupplierRequest request)
+    public async Task<ActionResult<SupplierViewModel>> Create(
+    [FromBody] CreateSupplierRequest request)
     {
-        var supplier = _supplierService.Create(request);
+        if (string.IsNullOrWhiteSpace(request.Name))
+        {
+            return BadRequest(
+                "Supplier name is required.");
+        }
+
+        var exists =
+            await _supplierService.ExistsByNameAsync(
+                request.Name);
+
+        if (exists)
+        {
+            return BadRequest(
+                "A supplier with this name already exists.");
+        }
+
+        var supplier = new Supplier
+        {
+            SupplierId = Guid.NewGuid(),
+            Name = request.Name,
+            Country = request.Country,
+            ContactEmail = request.ContactEmail,
+            PhoneNumber = request.PhoneNumber,
+            IsActive = request.IsActive
+        };
+
+        await _supplierService.AddAsync(supplier);
+
+        var result =
+            _mapper.Map<SupplierViewModel>(supplier);
 
         return CreatedAtAction(
             nameof(GetById),
             new { id = supplier.SupplierId },
-            supplier);
+            result);
     }
 
-    [HttpDelete("{id}")]
-    public ActionResult Deactivate([FromRoute] Guid id)
+    [HttpPut("{id}")]
+    public async Task<ActionResult<SupplierViewModel>> Update(
+    [FromRoute] Guid id,
+    [FromBody] Supplier request)
     {
-        var success = _supplierService.Deactivate(id);
+        var supplier =
+            await _supplierService.UpdateAsync(
+                id,
+                request);
 
-        if (!success)
+        if (supplier == null)
         {
             return NotFound();
         }
 
-        return NoContent();
+        return Ok(
+            _mapper.Map<SupplierViewModel>(supplier)
+        );
     }
 }
